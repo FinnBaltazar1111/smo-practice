@@ -140,6 +140,8 @@ namespace smo
             IN_PACKET(Select);
             IN_PACKET(UINavigation);
             IN_PACKET(PlayerScriptState);
+            IN_PACKET(PlayerSetOptions);
+            IN_PACKET(PlayerDoAction);
             default: break;
         }
     }

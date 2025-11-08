@@ -25,7 +25,7 @@ namespace smo
 
     enum InPacketType : u8
     {
-        PlayerScriptInfo = 1, PlayerScriptData = 2, PlayerTeleport = 3, PlayerGo = 4, Select = 5, UINavigation = 6, PlayerScriptState = 7, 
+        PlayerScriptInfo = 1, PlayerScriptData = 2, PlayerTeleport = 3, PlayerGo = 4, Select = 5, UINavigation = 6, PlayerScriptState = 7, PlayerSetOptions = 8, PlayerDoAction = 9,
     };
 
     class InPacket
@@ -103,6 +103,41 @@ namespace smo
     {
         u8 state;
     public:
+        void parse(const u8* data, u32 len);
+        void on(Server& server);
+    };
+
+    class InPacketPlayerSetOptions : public InPacket
+    {
+    public:
+        struct Option {
+            char* name = nullptr;
+            bool value;
+        };
+        u8 numOptions = 0;
+        Option* options = nullptr;
+
+        ~InPacketPlayerSetOptions() {
+            if (options) {
+                for (u8 i = 0; i < numOptions; i++) {
+                    if (options[i].name) delete[] options[i].name;
+                }
+                delete[] options;
+            }
+        }
+
+        void parse(const u8* data, u32 len);
+        void on(Server& server);
+    };
+
+    class InPacketPlayerDoAction : public InPacket
+    {
+        char* actionName = nullptr;
+    public:
+        ~InPacketPlayerDoAction() {
+            if (actionName) delete[] actionName;
+        }
+
         void parse(const u8* data, u32 len);
         void on(Server& server);
     };
