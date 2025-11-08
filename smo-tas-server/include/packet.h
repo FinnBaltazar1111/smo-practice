@@ -26,7 +26,7 @@ namespace smo
 
     enum class OutPacketType : u8
     {
-        PlayerScriptInfo = 1, PlayerScriptData = 2, PlayerTeleport = 3, PlayerGo = 4
+        PlayerScriptInfo = 1, PlayerScriptData = 2, PlayerTeleport = 3, PlayerGo = 4, PlayerSetOptions = 5, PlayerDoAction = 6
     };
     
     class OutPacket
@@ -83,6 +83,24 @@ namespace smo
     {
     public:
         fl::TasScript script;
+
+        u32 calcLen();
+        void construct(u8* dst);
+    };
+
+    class OutPacketPlayerSetOptions : public OutPacket
+    {
+    public:
+        std::unordered_map<std::string, bool> options;
+
+        u32 calcLen();
+        void construct(u8* dst);
+    };
+
+    class OutPacketPlayerDoAction : public OutPacket
+    {
+    public:
+        std::string actionName;
 
         u32 calcLen();
         void construct(u8* dst);

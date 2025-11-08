@@ -74,3 +74,40 @@ void smo::OutPacketPlayerScriptData::construct(u8* dst)
 {
     memcpy(dst, script.frames.data(), script.frames.size() * sizeof(fl::TasFrame));
 }
+
+u32 smo::OutPacketPlayerSetOptions::calcLen()
+{
+    // Format: [numOptions:u8] + for each option: [nameLen:u8][name:string][value:bool]
+    u32 len = 1; // numOptions byte
+    for (const auto& [name, value] : options) {
+        len += 1; // nameLen byte
+        len += name.size(); // name string
+        len += 1; // value bool
+    }
+    return len;
+}
+
+void smo::OutPacketPlayerSetOptions::construct(u8* dst)
+{
+    u32 offset = 0;
+    dst[offset++] = (u8)options.size();
+
+    for (const auto& [name, value] : options) {
+        dst[offset++] = (u8)name.size();
+        memcpy(dst + offset, name.data(), name.size());
+        offset += name.size();
+        dst[offset++] = value ? 1 : 0;
+    }
+}
+
+u32 smo::OutPacketPlayerDoAction::calcLen()
+{
+    // Format: [nameLen:u8][name:string]
+    return 1 + actionName.size();
+}
+
+void smo::OutPacketPlayerDoAction::construct(u8* dst)
+{
+    dst[0] = (u8)actionName.size();
+    memcpy(dst + 1, actionName.data(), actionName.size());
+}

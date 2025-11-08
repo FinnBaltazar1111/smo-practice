@@ -2,6 +2,7 @@
 #include "fl/tas.h"
 #include "fl/ui/ui.h"
 #include "fl/util.h"
+#include "fl/game.h"
 #include "game/Player/PlayerActorHakoniwa.h"
 #include "game/StageScene/ChangeStageInfo.h"
 #include "nn/mem.h"
@@ -158,6 +159,127 @@ void InPacketPlayerScriptState::on(Server& server)
             tas.start();
     } else if(state == 0) {
         tas.stop();
+    }
+}
+
+void InPacketPlayerSetOptions::parse(const u8* data, u32 len)
+{
+    if (len < 1) return;
+
+    numOptions = data[0];
+    if (numOptions == 0) return;
+
+    options = new Option[numOptions];
+
+    u32 offset = 1;
+    for (u8 i = 0; i < numOptions && offset < len; i++) {
+        if (offset >= len) break;
+
+        u8 nameLen = data[offset++];
+        if (offset + nameLen + 1 > len) break;
+
+        options[i].name = new char[nameLen + 1];
+        fl::memcpy(options[i].name, &data[offset], nameLen);
+        options[i].name[nameLen] = '\0';
+        offset += nameLen;
+
+        options[i].value = data[offset++] != 0;
+    }
+}
+
+void InPacketPlayerSetOptions::on(Server& server)
+{
+    auto& ui = fl::ui::PracticeUI::instance();
+    auto& uiOptions = ui.options;
+    auto& renderer = ui.renderer;
+
+    for (u8 i = 0; i < numOptions; i++) {
+        const char* name = options[i].name;
+        bool value = options[i].value;
+
+        // Main options
+        if (strcmp(name, "teleportEnabled") == 0) uiOptions.teleportEnabled = value;
+        else if (strcmp(name, "noclipEnabled") == 0) uiOptions.noclipEnabled = value;
+        else if (strcmp(name, "shineRefresh") == 0) uiOptions.shineRefresh = value;
+        else if (strcmp(name, "gotShineRefresh") == 0) uiOptions.gotShineRefresh = value;
+        else if (strcmp(name, "alwaysWarp") == 0) uiOptions.alwaysWarp = value;
+        else if (strcmp(name, "disableAutoSave") == 0) uiOptions.disableAutoSave = value;
+        else if (strcmp(name, "skipBowser") == 0) uiOptions.skipBowser = value;
+        else if (strcmp(name, "buttonMotionRoll") == 0) uiOptions.buttonMotionRoll = value;
+        else if (strcmp(name, "moonJump") == 0) uiOptions.moonJump = value;
+        else if (strcmp(name, "loadCurrentFile") == 0) uiOptions.loadCurrentFile = value;
+        else if (strcmp(name, "loadFileConfirm") == 0) uiOptions.loadFileConfirm = value;
+        else if (strcmp(name, "repeatCapBounce") == 0) uiOptions.repeatCapBounce = value;
+        else if (strcmp(name, "repeatRainbowSpin") == 0) uiOptions.repeatRainbowSpin = value;
+        else if (strcmp(name, "wallJumpCapBounce") == 0) uiOptions.wallJumpCapBounce = value;
+        else if (strcmp(name, "disableCameraVertical") == 0) uiOptions.disableCameraVertical = value;
+        else if (strcmp(name, "disableCameraStop") == 0) uiOptions.disableCameraStop = value;
+        else if (strcmp(name, "noDamageLife") == 0) uiOptions.noDamageLife = value;
+        else if (strcmp(name, "lockHack") == 0) uiOptions.lockHack = value;
+        else if (strcmp(name, "lockCarry") == 0) uiOptions.lockCarry = value;
+        else if (strcmp(name, "disableShineNumUnlock") == 0) uiOptions.disableShineNumUnlock = value;
+        else if (strcmp(name, "showOddSpace") == 0) uiOptions.showOddSpace = value;
+        else if (strcmp(name, "disablePuppet") == 0) uiOptions.disablePuppet = value;
+        else if (strcmp(name, "overrideBowserHat0") == 0) uiOptions.overrideBowserHat0 = value;
+        else if (strcmp(name, "reloadDUP") == 0) uiOptions.reloadDUP = value;
+        else if (strcmp(name, "shouldRender") == 0) uiOptions.shouldRender = value;
+        else if (strcmp(name, "muteBgm") == 0) uiOptions.muteBgm = value;
+        else if (strcmp(name, "pipeMazeOverride") == 0) uiOptions.pipeMazeOverride = value;
+
+        // Renderer options
+        else if (strcmp(name, "showPlayer") == 0) renderer.showPlayer = value;
+        else if (strcmp(name, "showAxis") == 0) renderer.showAxis = value;
+        else if (strcmp(name, "showArea") == 0) renderer.showArea = value;
+        else if (strcmp(name, "showAreaPoint") == 0) renderer.showAreaPoint = value;
+        else if (strcmp(name, "showAreaGroup") == 0) renderer.showAreaGroup = value;
+        else if (strcmp(name, "showHitInfoFloor") == 0) renderer.showHitInfoFloor = value;
+        else if (strcmp(name, "showHitInfoWall") == 0) renderer.showHitInfoWall = value;
+        else if (strcmp(name, "showHitInfoCeil") == 0) renderer.showHitInfoCeil = value;
+        else if (strcmp(name, "showHitInfoArray") == 0) renderer.showHitInfoArray = value;
+        else if (strcmp(name, "showCRC") == 0) renderer.showCRC = value;
+        else if (strcmp(name, "showHitSensors") == 0) renderer.showHitSensors = value;
+    }
+}
+
+void InPacketPlayerDoAction::parse(const u8* data, u32 len)
+{
+    if (len < 1) return;
+
+    u8 nameLen = data[0];
+    if (nameLen == 0 || nameLen + 1 > len) return;
+
+    actionName = new char[nameLen + 1];
+    fl::memcpy(actionName, &data[1], nameLen);
+    actionName[nameLen] = '\0';
+}
+
+void InPacketPlayerDoAction::on(Server& server)
+{
+    if (!actionName) return;
+
+    auto& game = fl::Game::instance();
+    StageScene* stageScene = fl::ui::PracticeUI::instance().getStageScene();
+
+    if (!stageScene) return;
+
+    // Function-type actions
+    if (strcmp(actionName, "killMario") == 0) {
+        game.killMario();
+    }
+    else if (strcmp(actionName, "damageMario") == 0) {
+        game.damageMario(1);
+    }
+    else if (strcmp(actionName, "lifeUpHeart") == 0) {
+        game.lifeUpHeart();
+    }
+    else if (strcmp(actionName, "healMario") == 0) {
+        game.healMario();
+    }
+    else if (strcmp(actionName, "removeCappy") == 0) {
+        game.removeCappy();
+    }
+    else if (strcmp(actionName, "invincibilityStar") == 0) {
+        game.invincibilityStar();
     }
 }
 }

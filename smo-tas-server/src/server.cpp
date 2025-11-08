@@ -226,11 +226,67 @@ namespace smo
                     }
                 }
             }},
+            {"opt", [this](std::deque<std::string>& args)
+            {
+                if (args.size() == 0)
+                {
+                    std::cout << "opt <option1>=<value1> [option2=value2] ..." << std::endl;
+                    std::cout << "Example: opt teleportEnabled=true noclipEnabled=false" << std::endl;
+                    return;
+                }
+
+                OutPacketPlayerSetOptions p;
+
+                for (const std::string& arg : args)
+                {
+                    size_t eqPos = arg.find('=');
+                    if (eqPos == std::string::npos)
+                    {
+                        std::cout << "Invalid format: " << arg << " (expected option=value)" << std::endl;
+                        return;
+                    }
+
+                    std::string optionName = arg.substr(0, eqPos);
+                    std::string valueStr = arg.substr(eqPos + 1);
+
+                    bool value;
+                    if (valueStr == "true" || valueStr == "1" || valueStr == "on")
+                        value = true;
+                    else if (valueStr == "false" || valueStr == "0" || valueStr == "off")
+                        value = false;
+                    else
+                    {
+                        std::cout << "Invalid boolean value: " << valueStr << " (expected true/false, 1/0, on/off)" << std::endl;
+                        return;
+                    }
+
+                    p.options[optionName] = value;
+                }
+
+                c.sendPacket(this, p, smo::OutPacketType::PlayerSetOptions);
+                std::cout << "Set " << p.options.size() << " option(s)" << std::endl;
+            }},
+            {"do", [this](std::deque<std::string>& args)
+            {
+                if (args.size() != 1)
+                {
+                    std::cout << "do <action>" << std::endl;
+                    std::cout << "Example: do killMario" << std::endl;
+                    return;
+                }
+
+                OutPacketPlayerDoAction p;
+                p.actionName = args[0];
+                c.sendPacket(this, p, smo::OutPacketType::PlayerDoAction);
+                std::cout << "Triggered action: " << args[0] << std::endl;
+            }},
             {"help", [this](std::deque<std::string>& args)
             {
                 std::cout << "tp <X> <Y> <Z>\n  Teleport Player to position" << std::endl;
                 std::cout << "go <stage name> <entrance> <scenario>\n  Teleport Player to stage" << std::endl;
                 std::cout << "script <script file>\n  Start script" << std::endl;
+                std::cout << "opt <option1>=<value1> [option2=value2] ...\n  Set mod menu options" << std::endl;
+                std::cout << "do <action>\n  Trigger a function-type action (e.g., killMario)" << std::endl;
             }}
         };
         std::deque<std::string> lastCommand;
