@@ -4,6 +4,8 @@
 
 class ControllerAppletFunction {
     public:
-        void connectControllerSinglePlay(al::GamePadSystem *);
-        void connectControllerSeparatePlay(al::GamePadSystem *);
+        // Returns bool to indicate success (user may cancel the controller dialog)
+        // Changed from void to match LunaKit implementation
+        static bool connectControllerSinglePlay(al::GamePadSystem *);
+        static bool connectControllerSeparatePlay(al::GamePadSystem *);
 };

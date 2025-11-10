@@ -46,6 +46,15 @@ int getTotalCoinNum(GameDataHolder const*);
 EFUN(0x004ED610, int, getPlayerJumpCount, EFUN_ARGS(const GameDataHolder*));
 EFUN(0x004ED640, int, getPlayerThrowCapCount, EFUN_ARGS(const GameDataHolder*));
 EFUN(0x004ED410, int, getTotalCoinNum, EFUN_ARGS(const GameDataHolder*));
+
+// 2-Player mode functions (addresses need to be found via reverse engineering)
+// TODO: Find correct addresses for these functions
+// EFUN(0x????????, bool, isSeparatePlay, EFUN_ARGS(const al::IUseSceneObjHolder*));
+// EFUN(0x????????, void, changeSeparatePlayMode, EFUN_ARGS(al::Scene*, bool));
+
+// Placeholder implementations until addresses are found
+inline bool isSeparatePlay(const al::IUseSceneObjHolder*) { return false; }
+inline void changeSeparatePlayMode(al::Scene*, bool) { }
 #endif
 
 }

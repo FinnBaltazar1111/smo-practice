@@ -30,9 +30,26 @@ void InPacketPlayerScriptInfo::parse(const u8* data, u32 len)
     fl::TasHolder& h = fl::TasHolder::instance();
     if (h.isRunning)
         h.stop();
-    scriptName = (char*)alloc(len + 1);
-    fl::memcpy(scriptName, data, len);
-    scriptName[len] = '\0';
+
+    // Check for format flags in first byte
+    if (len > 0) {
+        h.isBinaryFormat = data[0] & 0x01;  // Bit 0: binary format flag
+        h.isTwoPlayer = data[0] & 0x02;      // Bit 1: 2-player mode flag
+
+        // Rest of data is script name
+        if (len > 1) {
+            scriptName = (char*)alloc(len);
+            fl::memcpy(scriptName, data + 1, len - 1);
+            scriptName[len - 1] = '\0';
+        } else {
+            scriptName = nullptr;
+        }
+    } else {
+        // No data - default to text format
+        h.isBinaryFormat = false;
+        h.isTwoPlayer = false;
+        scriptName = nullptr;
+    }
 }
 
 void InPacketPlayerScriptInfo::on(Server& server)
@@ -40,12 +57,30 @@ void InPacketPlayerScriptInfo::on(Server& server)
     fl::TasHolder& h = fl::TasHolder::instance();
     if (h.isRunning)
         h.stop();
-    h.setScriptName(scriptName);
-    if (h.frames) {
-        dealloc(h.frames);
-        h.frames = nullptr;
+
+    if (scriptName)
+        h.setScriptName(scriptName);
+
+    // Clean up old script data based on format
+    if (h.isBinaryFormat) {
+        // Clean up binary format data
+        if (h.binaryScript) {
+            dealloc(h.binaryScript);
+            h.binaryScript = nullptr;
+        }
+        h.binaryFrameIndex = 0;
+        h.mPrevButtons[0] = 0;
+        h.mPrevButtons[1] = 0;
+    } else {
+        // Clean up text format data
+        if (h.frames) {
+            dealloc(h.frames);
+            h.frames = nullptr;
+        }
+        h.frameCount = 0;
     }
-    h.frameCount = 0;
+
+    h.gameStep = 0;
 }
 
 void InPacketPlayerTeleport::parse(const u8* data, u32 len)
@@ -111,15 +146,35 @@ void InPacketPlayerScriptData::parse(const u8* data, u32 len)
     fl::TasHolder& h = fl::TasHolder::instance();
     if (h.isRunning)
         h.stop();
-    size_t cur = h.frameCount;
-    if (h.frames) {
-        h.frameCount += len / sizeof(fl::TasFrame);
-        h.frames = (fl::TasFrame*)realloc(h.frames, h.frameCount * sizeof(fl::TasFrame));
+
+    if (h.isBinaryFormat) {
+        // Binary format: allocate/append to Script2P buffer
+        if (h.binaryScript == nullptr) {
+            // First chunk - contains header and initial frames
+            h.binaryScript = (fl::Script2P*)alloc(len);
+            fl::memcpy(h.binaryScript, data, len);
+        } else {
+            // Subsequent chunks - append frames
+            size_t oldSize = 284 + (h.binaryScript->mFrameCount * sizeof(fl::InputFrame2P));
+            size_t newSize = oldSize + len;
+            h.binaryScript = (fl::Script2P*)realloc(h.binaryScript, newSize);
+            fl::memcpy(((u8*)h.binaryScript) + oldSize, data, len);
+
+            // Update frame count
+            h.binaryScript->mFrameCount += len / sizeof(fl::InputFrame2P);
+        }
     } else {
-        h.frames = (fl::TasFrame*)alloc(len);
-        h.frameCount = len / sizeof(fl::TasFrame);
+        // Text format: existing logic (unchanged)
+        size_t cur = h.frameCount;
+        if (h.frames) {
+            h.frameCount += len / sizeof(fl::TasFrame);
+            h.frames = (fl::TasFrame*)realloc(h.frames, h.frameCount * sizeof(fl::TasFrame));
+        } else {
+            h.frames = (fl::TasFrame*)alloc(len);
+            h.frameCount = len / sizeof(fl::TasFrame);
+        }
+        fl::memcpy(&h.frames[cur], data, len);
     }
-    fl::memcpy(&h.frames[cur], data, len);
 }
 
 void InPacketPlayerScriptData::on(Server& server) { }

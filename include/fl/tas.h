@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sead/math/seadVector.h>
+#include <fl/tas2p.h>
 
 namespace fl
 {
@@ -18,6 +19,7 @@ namespace fl
     {
         static TasHolder& instance() {static TasHolder tasHolder; return tasHolder;}
 
+        // 1-Player TAS data (text format)
         TasFrame* frames = nullptr;
 
         bool isRunning = false;
@@ -29,7 +31,18 @@ namespace fl
 
         char* scriptName = nullptr;
 
+        // 2-Player TAS data (binary format)
+        bool isBinaryFormat = false;          // True if using LunaKit binary format
+        bool isTwoPlayer = false;             // True if script uses 2P mode
+        Script2P* binaryScript = nullptr;     // Binary format script data
+        u32 binaryFrameIndex = 0;             // Current frame index in binary script
+        u32 mPrevButtons[2] = {0, 0};         // Previous button state for both players
+        u32 gameStep = 0;                     // Game frame counter for step-based playback
+
+        // Methods
         void update();
+        void update2P();                      // Step-based update for binary format
+        void applyFrame2P(InputFrame2P& frame);  // Apply 2P frame to controllers
         void start();
         void stop();
         void setScriptName(char* name);
